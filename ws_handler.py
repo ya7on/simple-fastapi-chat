@@ -15,6 +15,9 @@ class WSHandler:
         await websocket.send_text('Welcome')  # TODO
         return id_
 
+    async def delete_connection(self, *, id_):
+        del self.connection[id_]
+
     async def handle_message(self, *, id_, data):
         from amqp import amqp_handler
 
@@ -24,7 +27,8 @@ class WSHandler:
 
     async def notify_all(self, *, message):
         for id_, ws_inst in self.connection.items():
-            await ws_inst.send_text(f'New message {message}')
+            if ws_inst.client_state != 2:
+                await ws_inst.send_text(f'New message {message}')
 
 
 ws_handler = WSHandler()

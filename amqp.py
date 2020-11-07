@@ -18,10 +18,12 @@ class AMQPHandler:
         )
         self.channel = await self.connection.channel()
         await self.channel.set_qos(prefetch_count=100)
-        queue = await self.channel.declare_queue(
+        exchange = await self.channel.declare_exchange(
             self.QUEUE_NAME,
-            auto_delete=True,
+            aio_pika.ExchangeType.FANOUT,
         )
+        queue = await self.channel.declare_queue(exclusive=True)
+        await queue.bind(exchange)
         await queue.consume(self.handle_message)
         return self.connection
 
@@ -33,8 +35,16 @@ class AMQPHandler:
             )
 
     async def publish(self, message_text: str):
-        await self.channel.default_exchange.publish(
-            aio_pika.Message(body=message_text.encode()),
+        message = aio_pika.Message(
+            body=message_text.encode(),
+            delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+        )
+        exchange = await self.channel.declare_exchange(
+            self.QUEUE_NAME,
+            aio_pika.ExchangeType.FANOUT,
+        )
+        await exchange.publish(
+            message,
             routing_key=self.QUEUE_NAME,
         )
 
