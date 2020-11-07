@@ -1,3 +1,4 @@
+import json
 from asyncio import get_event_loop
 
 import aio_pika
@@ -31,12 +32,12 @@ class AMQPHandler:
     async def handle_message(cls, message: aio_pika.IncomingMessage):
         async with message.process():
             await ws_handler.notify_all(
-                message=message.body,
+                message=json.loads(message.body),
             )
 
-    async def publish(self, message_text: str):
+    async def publish(self, data: dict):
         message = aio_pika.Message(
-            body=message_text.encode(),
+            body=json.dumps(data).encode(),
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
         )
         exchange = await self.channel.declare_exchange(
